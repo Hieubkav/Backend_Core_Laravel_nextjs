@@ -1,209 +1,221 @@
-# Authentication & Authorization
+# Authentication API
 
 ## Overview
 
-API sử dụng Laravel Sanctum cho token-based authentication.
-
-## Setup Sanctum
-
-### 1. Install & Configure
-
-```bash
-composer require laravel/sanctum
-php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
-php artisan migrate
-```
-
-### 2. Add HasApiTokens to User Model
-
-```php
-use Laravel\Sanctum\HasApiTokens;
-
-class User extends Authenticatable
-{
-    use HasApiTokens;
-}
-```
-
-### 3. Configure Middleware
-
-Thêm vào `app/Http/Kernel.php`:
-```php
-'api' => [
-    \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-    'throttle:api',
-    \Illuminate\Routing\Middleware\SubstituteBindings::class,
-],
-```
+Backend dùng **Laravel Sanctum** để quản lý token-based authentication. Mỗi user sau khi login nhận 1 `access_token` để sử dụng trong các request tiếp theo.
 
 ## Authentication Flow
 
-### 1. Login Endpoint
+```
+1. User register → Tạo account
+2. User login → Lấy access_token
+3. Frontend lưu token (cookie hoặc localStorage)
+4. Gửi request với Authorization header: Bearer {access_token}
+5. Backend verify token → Cấp quyền truy cập
+```
 
-```php
-// app/Http/Controllers/Api/V1/AuthController.php
-public function login(Request $request)
+## Endpoints
+
+### Public Routes
+
+#### Register
+```
+POST /api/v1/auth/register
+Content-Type: application/json
+
 {
-    $request->validate([
-        'email' => 'required|email',
-        'password' => 'required',
-    ]);
-
-    if (!Auth::attempt($request->only('email', 'password'))) {
-        return $this->unauthorized('Invalid credentials');
-    }
-
-    $user = Auth::user();
-    $token = $user->createToken('api-token')->plainTextToken;
-
-    return $this->success([
-        'user' => new UserResource($user),
-        'token' => $token,
-    ], 'Login successful', 200);
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "Password123",
+  "password_confirmation": "Password123"
 }
 ```
 
-### 2. Protected Routes
-
-```php
-// routes/api/v1.php
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user', fn(Request $r) => new UserResource($r->user()));
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::apiResource('users', UserController::class);
-});
-```
-
-### 3. Client Usage
-
-```javascript
-// Frontend - Attach token to requests
-const token = localStorage.getItem('api_token');
-
-fetch('/api/v1/users', {
-  method: 'GET',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
+**Response Success (201)**
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "user",
+    "is_admin": false,
+    "created_at": "2025-12-03T10:00:00Z",
+    "updated_at": "2025-12-03T10:00:00Z"
   }
-});
-```
-
-## Token Management
-
-### Generate Token
-
-```php
-$token = $user->createToken('api-token')->plainTextToken;
-
-// With abilities
-$token = $user->createToken('api-token', ['read', 'create'])->plainTextToken;
-```
-
-### Revoke Token
-
-```php
-$user->tokens()->delete();
-
-// Or specific token
-$user->tokens->where('name', 'api-token')->first()->delete();
-```
-
-### Check Token Abilities
-
-```php
-// In controller
-if ($request->user()->tokenCan('read')) {
-    // User can read
 }
 ```
 
-## Protected Resources
+#### Login
+```
+POST /api/v1/auth/login
+Content-Type: application/json
 
-### Controller Example
-
-```php
-class UserController extends ApiController
 {
-    public function show(User $user, Request $request)
-    {
-        // Only allow viewing own profile unless admin
-        if ($request->user()->id !== $user->id && !$request->user()->is_admin) {
-            return $this->forbidden('Cannot view other profiles');
-        }
-
-        return $this->success(new UserResource($user));
-    }
+  "email": "john@example.com",
+  "password": "Password123"
 }
 ```
 
-## Token Expiration
-
-### Configure in config/sanctum.php
-
-```php
-'expiration' => 60 * 24 * 365, // 1 year in minutes
-```
-
-### Refresh Token Pattern
-
-Implement refresh token untuk security:
-
-```php
-// Issue refresh token
-$refreshToken = $user->createToken('refresh-token', ['refresh'])->plainTextToken;
-
-// Use refresh token to get new access token
-public function refresh(Request $request)
+**Response Success (200)**
+```json
 {
-    $token = $request->user()->createToken('api-token')->plainTextToken;
-    return $this->success(['token' => $token]);
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "user": {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "user",
+      "is_admin": false,
+      "created_at": "2025-12-03T10:00:00Z",
+      "updated_at": "2025-12-03T10:00:00Z"
+    },
+    "access_token": "3|sG2kqYZ9r0w7xL8m9n...",
+    "token_type": "Bearer"
+  }
 }
 ```
 
-## Authorization (Gates & Policies)
-
-### Define Gates
-
-```php
-// app/Providers/AuthServiceProvider.php
-use Illuminate\Support\Facades\Gate;
-
-Gate::define('update-post', function (User $user, Post $post) {
-    return $user->id === $post->user_id;
-});
-```
-
-### Use in Controller
-
-```php
-public function update(Request $request, Post $post)
+**Response Error (401)**
+```json
 {
-    if (!Gate::allows('update-post', $post)) {
-        return $this->forbidden();
-    }
-
-    $post->update($request->validated());
-    return $this->success(new PostResource($post));
+  "success": false,
+  "message": "Invalid credentials",
+  "errors": {
+    "email": ["The provided credentials are invalid."]
+  }
 }
 ```
 
-### Or Use Authorize
+### Protected Routes
 
-```php
-public function update(Request $request, Post $post)
+#### Get Current User Profile
+```
+GET /api/v1/auth/me
+Authorization: Bearer {access_token}
+```
+
+**Response (200)**
+```json
 {
-    $this->authorize('update-post', $post);
-
-    $post->update($request->validated());
-    return $this->success(new PostResource($post));
+  "success": true,
+  "message": "User profile retrieved",
+  "data": {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "user",
+    "is_admin": false,
+    "created_at": "2025-12-03T10:00:00Z",
+    "updated_at": "2025-12-03T10:00:00Z"
+  }
 }
+```
+
+#### Update Profile
+```
+PUT /api/v1/auth/profile
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com"
+}
+```
+
+**Response (200)**
+```json
+{
+  "success": true,
+  "message": "Profile updated successfully",
+  "data": {
+    "id": 1,
+    "name": "Jane Doe",
+    "email": "jane@example.com",
+    "role": "user",
+    "is_admin": false,
+    "created_at": "2025-12-03T10:00:00Z",
+    "updated_at": "2025-12-03T10:00:01Z"
+  }
+}
+```
+
+#### Change Password
+```
+POST /api/v1/auth/change-password
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+{
+  "current_password": "Password123",
+  "new_password": "NewPassword456",
+  "new_password_confirmation": "NewPassword456"
+}
+```
+
+**Response (200)**
+```json
+{
+  "success": true,
+  "message": "Password changed successfully",
+  "data": null
+}
+```
+
+#### Logout
+```
+POST /api/v1/auth/logout
+Authorization: Bearer {access_token}
+```
+
+**Response (200)**
+```json
+{
+  "success": true,
+  "message": "Logged out successfully",
+  "data": null
+}
+```
+
+## Password Requirements
+
+- Minimum 8 characters
+- Contains uppercase letter
+- Contains lowercase letter
+- Contains number
+
+Example valid passwords:
+- `Password123`
+- `MySecure@Pass456`
+
+## User Roles
+
+### User (mặc định)
+- Role: `user`
+- is_admin: `false`
+- Permissions: Xem thông tin cá nhân, cập nhật profile
+
+### Admin
+- Role: `admin`
+- is_admin: `true`
+- Permissions: Quản lý users, admin routes
+
+## Headers Required
+
+Mỗi request protected route cần gửi token:
+
+```
+Authorization: Bearer {access_token}
 ```
 
 ## Error Responses
 
-### Unauthorized (401)
-
+### 401 Unauthorized
 ```json
 {
   "success": false,
@@ -212,8 +224,7 @@ public function update(Request $request, Post $post)
 }
 ```
 
-### Forbidden (403)
-
+### 403 Forbidden (Not Admin)
 ```json
 {
   "success": false,
@@ -222,51 +233,87 @@ public function update(Request $request, Post $post)
 }
 ```
 
-## Best Practices
-
-1. **Always use HTTPS** in production
-2. **Store tokens securely** (not in localStorage)
-3. **Implement token refresh** for long-lived sessions
-4. **Set appropriate expiration** times
-5. **Revoke tokens on logout**
-6. **Use abilities** for fine-grained permissions
-7. **Log authentication** failures
-8. **Rate limit** login attempts
-9. **Validate email** before allowing login
-10. **Use strong passwords** requirements
-
-## Testing
-
-```php
-// tests/Feature/AuthTest.php
-public function test_user_can_login()
+### 422 Validation Error
+```json
 {
-    $user = User::factory()->create();
-
-    $response = $this->postJson('/api/v1/auth/login', [
-        'email' => $user->email,
-        'password' => 'password',
-    ]);
-
-    $response->assertStatus(200);
-    $response->assertHasJsonPath('data.token');
+  "success": false,
+  "message": "Validation failed",
+  "errors": {
+    "email": ["Email already registered"],
+    "password": ["Password must be at least 8 characters"]
+  }
 }
+```
 
-public function test_protected_endpoint_requires_token()
-{
-    $response = $this->getJson('/api/v1/user');
-    $response->assertUnauthorized();
+## Frontend Integration
+
+### Lưu Token
+
+```javascript
+// Sau login
+const { access_token } = response.data.data;
+
+// Option 1: Cookie (httpOnly)
+// Server sẽ set automatically
+
+// Option 2: localStorage
+localStorage.setItem('auth_token', access_token);
+```
+
+### Gửi Request
+
+```javascript
+// Fetch API
+fetch('/api/v1/auth/me', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+
+// Axios
+axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+axios.get('/api/v1/auth/me');
+```
+
+### Middleware (Next.js)
+
+```typescript
+// app/middleware.ts
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('auth_token')?.value;
+  
+  if (request.nextUrl.pathname.startsWith('/admin') && !token) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
 }
+```
 
-public function test_authenticated_user_can_access()
-{
-    $user = User::factory()->create();
-    $token = $user->createToken('test')->plainTextToken;
+### Protected Layout (Next.js)
 
-    $response = $this->getJson('/api/v1/user', [
-        'Authorization' => "Bearer $token",
-    ]);
+```typescript
+// app/admin/layout.tsx
+export default async function AdminLayout({ children }) {
+  const token = cookies().get('auth_token')?.value;
+  
+  if (!token) {
+    redirect('/login');
+  }
 
-    $response->assertOk();
+  // Verify token with backend
+  const res = await fetch('http://localhost:8000/api/v1/auth/me', {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  if (!res.ok) {
+    redirect('/login');
+  }
+
+  const { data: user } = await res.json();
+  
+  if (!user.is_admin) {
+    redirect('/unauthorized');
+  }
+
+  return <>{children}</>;
 }
 ```
