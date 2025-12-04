@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\PostController;
+use App\Http\Controllers\Api\V1\MediaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -33,6 +34,7 @@ Route::middleware('api')->group(function () {
         Route::middleware('admin')->group(function () {
             Route::apiResource('users', UserController::class);
             Route::apiResource('posts', PostController::class);
+            Route::apiResource('media', MediaController::class);
         });
     });
 });
