@@ -53,9 +53,6 @@ class UserController extends ApiController
                     'required',
                     'string',
                     'min:8',
-                    'regex:/[A-Z]/',
-                    'regex:/[a-z]/',
-                    'regex:/[0-9]/',
                 ],
                 'role' => ['required', 'in:user,admin'],
             ]);

@@ -29,9 +29,6 @@ class RegisterRequest extends BaseFormRequest
                 'string',
                 'min:8',
                 'confirmed',
-                'regex:/[A-Z]/',
-                'regex:/[a-z]/',
-                'regex:/[0-9]/',
             ],
         ];
     }
@@ -49,7 +46,6 @@ class RegisterRequest extends BaseFormRequest
             'password.required' => 'Password is required',
             'password.min' => 'Password must be at least 8 characters',
             'password.confirmed' => 'Password confirmation does not match',
-            'password.regex' => 'Password must contain uppercase, lowercase, and number',
         ];
     }
 }
