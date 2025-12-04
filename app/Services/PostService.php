@@ -8,7 +8,10 @@ use Illuminate\Support\Str;
 
 class PostService extends BaseService
 {
-    public function __construct(private PostRepository $posts)
+    public function __construct(
+        private PostRepository $posts,
+        private ContentImageService $contentImages,
+    )
     {
     }
 
@@ -26,6 +29,9 @@ class PostService extends BaseService
     public function create(array $data): Post
     {
         $data['slug'] ??= Str::slug($data['title']);
+        if (isset($data['content'])) {
+            $data['content'] = $this->contentImages->replaceBase64Images($data['content'], 'posts');
+        }
 
         return $this->posts->create($data);
     }
@@ -43,6 +49,10 @@ class PostService extends BaseService
      */
     public function update(Post $post, array $data): Post
     {
+        if (isset($data['content'])) {
+            $data['content'] = $this->contentImages->replaceBase64Images($data['content'], 'posts');
+        }
+
         $this->posts->update($post->id, $data);
 
         return $post->refresh();
