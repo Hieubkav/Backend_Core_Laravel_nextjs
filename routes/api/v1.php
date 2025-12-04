@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\PostController;
 use App\Http\Controllers\Api\V1\MediaController;
+use App\Http\Controllers\Api\V1\SettingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,6 +17,9 @@ use App\Http\Controllers\Api\V1\MediaController;
 */
 
 Route::middleware('api')->group(function () {
+    // Public settings
+    Route::get('/settings', [SettingController::class, 'show'])->name('settings.show');
+
     // Public auth routes
     Route::prefix('auth')->group(function () {
         Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
@@ -35,6 +39,8 @@ Route::middleware('api')->group(function () {
             Route::apiResource('users', UserController::class);
             Route::apiResource('posts', PostController::class);
             Route::apiResource('media', MediaController::class);
+            Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
+            Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
         });
     });
 });
