@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
+use App\Exceptions\AuthenticationException;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 
-class AuthService
+class AuthService extends BaseService
 {
     /**
      * Register a new user
@@ -31,9 +31,12 @@ class AuthService
         $user = User::where('email', $email)->first();
 
         if (!$user || !Hash::check($password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are invalid.'],
-            ]);
+            throw new AuthenticationException(
+                'Invalid credentials',
+                401,
+                null,
+                ['email' => ['The provided credentials are invalid.']]
+            );
         }
 
         // Revoke existing tokens
@@ -95,9 +98,12 @@ class AuthService
     public function changePassword(User $user, string $currentPassword, string $newPassword): bool
     {
         if (!Hash::check($currentPassword, $user->password)) {
-            throw ValidationException::withMessages([
-                'current_password' => ['The provided password is incorrect.'],
-            ]);
+            throw new AuthenticationException(
+                'Password change failed',
+                400,
+                null,
+                ['current_password' => ['The provided password is incorrect.']]
+            );
         }
 
         $user->password = Hash::make($newPassword);

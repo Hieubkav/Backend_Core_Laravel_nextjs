@@ -4,13 +4,10 @@ namespace App\Services;
 
 /**
  * Base Service
- * 
- * Provides common methods for all business logic services
+ *
+ * Common base class for all business logic services.
+ * Extend this class to maintain consistency and enable future shared functionality.
  */
 abstract class BaseService
 {
-    /**
-     * Service constructor
-     */
-    public function __construct() {}
 }

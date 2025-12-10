@@ -22,17 +22,13 @@ class PostController extends ApiController
      */
     public function index(Request $request): JsonResponse
     {
-        try {
-            $perPage = (int) $request->get('per_page', 15);
-            $posts = $this->postService->list($perPage);
+        $perPage = (int) $request->get('per_page', 15);
+        $posts = $this->postService->list($perPage);
 
-            return $this->success(
-                PostResource::collection($posts),
-                'Posts retrieved successfully'
-            );
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->success(
+            PostResource::collection($posts),
+            'Posts retrieved successfully'
+        );
     }
 
     /**
@@ -40,16 +36,12 @@ class PostController extends ApiController
      */
     public function store(PostStoreRequest $request): JsonResponse
     {
-        try {
-            $post = $this->postService->create($request->validated());
+        $post = $this->postService->create($request->validated());
 
-            return $this->created(
-                new PostResource($post),
-                'Post created successfully'
-            );
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->created(
+            new PostResource($post),
+            'Post created successfully'
+        );
     }
 
     /**
@@ -68,16 +60,12 @@ class PostController extends ApiController
      */
     public function update(PostUpdateRequest $request, Post $post): JsonResponse
     {
-        try {
-            $updated = $this->postService->update($post, $request->validated());
+        $updated = $this->postService->update($post, $request->validated());
 
-            return $this->success(
-                new PostResource($updated),
-                'Post updated successfully'
-            );
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->success(
+            new PostResource($updated),
+            'Post updated successfully'
+        );
     }
 
     /**
@@ -85,15 +73,8 @@ class PostController extends ApiController
      */
     public function destroy(Post $post): JsonResponse
     {
-        try {
-            $this->postService->delete($post);
+        $this->postService->delete($post);
 
-            return $this->success(
-                null,
-                'Post deleted successfully'
-            );
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->success(null, 'Post deleted successfully');
     }
 }

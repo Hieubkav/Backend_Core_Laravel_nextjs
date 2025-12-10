@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Exceptions\ApiException;
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\Media\MediaIndexRequest;
 use App\Http\Requests\Media\MediaStoreRequest;
@@ -22,20 +23,16 @@ class MediaController extends ApiController
      */
     public function index(MediaIndexRequest $request): JsonResponse
     {
-        try {
-            $filters = $request->validated();
-            $perPage = (int) ($filters['per_page'] ?? 15);
-            unset($filters['per_page']);
+        $filters = $request->validated();
+        $perPage = (int) ($filters['per_page'] ?? 15);
+        unset($filters['per_page']);
 
-            $media = $this->mediaService->paginate($filters, $perPage);
+        $media = $this->mediaService->paginate($filters, $perPage);
 
-            return $this->success(
-                MediaResource::collection($media),
-                'Media retrieved successfully'
-            );
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->success(
+            MediaResource::collection($media),
+            'Media retrieved successfully'
+        );
     }
 
     /**
@@ -43,16 +40,12 @@ class MediaController extends ApiController
      */
     public function store(MediaStoreRequest $request): JsonResponse
     {
-        try {
-            $media = $this->mediaService->upload($request->validated());
+        $media = $this->mediaService->upload($request->validated());
 
-            return $this->created(
-                new MediaResource($media),
-                'Media uploaded successfully'
-            );
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->created(
+            new MediaResource($media),
+            'Media uploaded successfully'
+        );
     }
 
     /**
@@ -71,16 +64,12 @@ class MediaController extends ApiController
      */
     public function update(MediaUpdateRequest $request, Media $medium): JsonResponse
     {
-        try {
-            $updated = $this->mediaService->update($medium, $request->validated());
+        $updated = $this->mediaService->update($medium, $request->validated());
 
-            return $this->success(
-                new MediaResource($updated),
-                'Media updated successfully'
-            );
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->success(
+            new MediaResource($updated),
+            'Media updated successfully'
+        );
     }
 
     /**
@@ -88,16 +77,12 @@ class MediaController extends ApiController
      */
     public function destroy(Media $medium): JsonResponse
     {
-        try {
-            $deleted = $this->mediaService->delete($medium);
+        $deleted = $this->mediaService->delete($medium);
 
-            if (!$deleted) {
-                return $this->error('Không thể xoá media', 500);
-            }
-
-            return $this->success(null, 'Media deleted successfully');
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
+        if (!$deleted) {
+            throw new ApiException('Không thể xoá media', 500);
         }
+
+        return $this->success(null, 'Media deleted successfully');
     }
 }

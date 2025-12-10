@@ -6,11 +6,11 @@ use App\Http\Controllers\Api\ApiController;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ChangePasswordRequest;
+use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends ApiController
 {
@@ -23,16 +23,12 @@ class AuthController extends ApiController
      */
     public function register(RegisterRequest $request): JsonResponse
     {
-        try {
-            $user = $this->authService->register($request->validated());
+        $user = $this->authService->register($request->validated());
 
-            return $this->created(
-                new UserResource($user),
-                'User registered successfully'
-            );
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->created(
+            new UserResource($user),
+            'User registered successfully'
+        );
     }
 
     /**
@@ -40,29 +36,19 @@ class AuthController extends ApiController
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        try {
-            $result = $this->authService->login(
-                $request->email,
-                $request->password
-            );
+        $result = $this->authService->login(
+            $request->email,
+            $request->password
+        );
 
-            return $this->success(
-                [
-                    'user' => new UserResource($result['user']),
-                    'access_token' => $result['access_token'],
-                    'token_type' => $result['token_type'],
-                ],
-                'Login successful'
-            );
-        } catch (ValidationException $e) {
-            return $this->error(
-                'Invalid credentials',
-                401,
-                $e->errors()
-            );
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->success(
+            [
+                'user' => new UserResource($result['user']),
+                'access_token' => $result['access_token'],
+                'token_type' => $result['token_type'],
+            ],
+            'Login successful'
+        );
     }
 
     /**
@@ -79,25 +65,14 @@ class AuthController extends ApiController
     /**
      * Update user profile
      */
-    public function updateProfile(Request $request): JsonResponse
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
     {
-        try {
-            $validated = $request->validate([
-                'name' => 'sometimes|string|max:255',
-                'email' => 'sometimes|email|unique:users,email,' . $request->user()->id,
-            ]);
+        $user = $this->authService->updateProfile($request->user(), $request->validated());
 
-            $user = $this->authService->updateProfile($request->user(), $validated);
-
-            return $this->success(
-                new UserResource($user),
-                'Profile updated successfully'
-            );
-        } catch (ValidationException $e) {
-            return $this->validationError($e->errors());
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->success(
+            new UserResource($user),
+            'Profile updated successfully'
+        );
     }
 
     /**
@@ -105,26 +80,13 @@ class AuthController extends ApiController
      */
     public function changePassword(ChangePasswordRequest $request): JsonResponse
     {
-        try {
-            $this->authService->changePassword(
-                $request->user(),
-                $request->current_password,
-                $request->new_password
-            );
+        $this->authService->changePassword(
+            $request->user(),
+            $request->current_password,
+            $request->new_password
+        );
 
-            return $this->success(
-                null,
-                'Password changed successfully'
-            );
-        } catch (ValidationException $e) {
-            return $this->error(
-                'Password change failed',
-                400,
-                $e->errors()
-            );
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->success(null, 'Password changed successfully');
     }
 
     /**
@@ -132,15 +94,8 @@ class AuthController extends ApiController
      */
     public function logout(Request $request): JsonResponse
     {
-        try {
-            $this->authService->logout($request->user());
+        $this->authService->logout($request->user());
 
-            return $this->success(
-                null,
-                'Logged out successfully'
-            );
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->success(null, 'Logged out successfully');
     }
 }

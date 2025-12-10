@@ -33,16 +33,12 @@ class SettingController extends ApiController
      */
     public function store(SettingStoreRequest $request): JsonResponse
     {
-        try {
-            $setting = $this->settingService->update($request->validated());
+        $setting = $this->settingService->update($request->validated());
 
-            return $this->created(
-                new SettingResource($setting),
-                'Setting saved successfully'
-            );
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->created(
+            new SettingResource($setting),
+            'Setting saved successfully'
+        );
     }
 
     /**
@@ -50,15 +46,11 @@ class SettingController extends ApiController
      */
     public function update(SettingUpdateRequest $request): JsonResponse
     {
-        try {
-            $setting = $this->settingService->update($request->validated());
+        $setting = $this->settingService->update($request->validated());
 
-            return $this->success(
-                new SettingResource($setting),
-                'Setting updated successfully'
-            );
-        } catch (\Exception $e) {
-            return $this->error($e->getMessage(), 500);
-        }
+        return $this->success(
+            new SettingResource($setting),
+            'Setting updated successfully'
+        );
     }
 }

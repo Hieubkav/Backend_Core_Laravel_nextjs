@@ -3,7 +3,7 @@ Trả lời bằng tiếng Việt
 
 ## Nguyên tắc thiết kế
 - **SOLID**: Thiết kế OOP rõ ràng, linh hoạt
-- **KISS**: Giữ mọi thứ đơn giản
+- **KISS**: Giữ mọi thứ đơn giản, không over-engineering
 - **YAGNI**: Không làm thứ chưa cần
 - **DRY**: Không lặp lại logic
 - **TDA**: Ra lệnh cho object, không lấy dữ liệu ra xử lý
@@ -13,14 +13,13 @@ Trả lời bằng tiếng Việt
 Xem tài liệu chi tiết tại: `docs/`
 
 ### Kiến trúc tầng (Layered Architecture)
-- **Controller** (`Http/Controllers/Api`) - Xử lý HTTP request/response
-- **Service** (`Services`) - Logic nghiệp vụ
-- **Repository** (`Repositories`) - Truy cập dữ liệu
+- **Controller** (`Http/Controllers/Api`) - Xử lý HTTP request/response, KHÔNG có try-catch
+- **Service** (`Services`) - Logic nghiệp vụ, extends BaseService
+- **Repository** (`Repositories`) - Truy cập dữ liệu (chỉ dùng khi có custom queries)
 - **Model** (`Models`) - Eloquent models
-- **Request** (`Http/Requests`) - Validation input
+- **Request** (`Http/Requests`) - Validation input, extends BaseFormRequest
 - **Resource** (`Http/Resources`) - Transform output
-- **DTO** (`DTOs`) - Data transfer object
-- **Exception** (`Exceptions`) - Custom exceptions
+- **Exception** (`Exceptions`) - Custom exceptions, xử lý global trong Handler.php
 
 ### Response format
 ```json
@@ -32,14 +31,53 @@ Xem tài liệu chi tiết tại: `docs/`
 }
 ```
 
+### Exception Handling (QUAN TRỌNG)
+**KHÔNG dùng try-catch trong Controller!** Exceptions được xử lý global trong `Handler.php`:
+- `ValidationException` → 422
+- `ModelNotFoundException` → 404
+- `ApiException` → custom status code
+- `HttpException` → tương ứng HTTP status
+- Các exception khác → 500
+
+```php
+// ✅ ĐÚNG - Controller clean, không try-catch
+public function store(PostStoreRequest $request): JsonResponse
+{
+    $post = $this->postService->create($request->validated());
+    return $this->created(new PostResource($post), 'Post created');
+}
+
+// ❌ SAI - Không cần try-catch
+public function store(Request $request): JsonResponse
+{
+    try {
+        $post = $this->postService->create($request->validated());
+        return $this->created(new PostResource($post));
+    } catch (\Exception $e) {
+        return $this->error($e->getMessage(), 500);
+    }
+}
+```
+
+### Dùng ApiException cho business errors
+```php
+use App\Exceptions\ApiException;
+
+// Trong Service hoặc Controller
+if ($adminCount <= 1) {
+    throw new ApiException('Cannot delete the last admin', 400);
+}
+```
+
 ### Khi tạo feature mới
 1. Tạo Migration & Model
-2. Tạo Repository + Service
-3. Tạo Controller
-4. Tạo Form Requests (StoreRequest, UpdateRequest)
-5. Tạo Resources (Resource, Collection)
-6. Thêm routes vào `routes/api/v1.php`
-7. Test API
+2. Tạo Service (extends BaseService)
+3. Tạo Repository (CHỈ nếu cần custom queries phức tạp)
+4. Tạo Controller (extends ApiController, KHÔNG try-catch)
+5. Tạo Form Requests (StoreRequest, UpdateRequest) extends BaseFormRequest
+6. Tạo Resources (Resource, Collection)
+7. Thêm routes vào `routes/api/v1.php`
+8. Test API
 
 ### Routes naming
 - `GET /api/v1/users` - List
