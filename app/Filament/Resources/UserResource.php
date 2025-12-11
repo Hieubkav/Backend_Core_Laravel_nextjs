@@ -6,8 +6,8 @@ use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
 use Filament\Actions;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -46,7 +46,7 @@ class UserResource extends Resource
     {
         return $schema
             ->components([
-                Forms\Components\Section::make('Thông tin cơ bản')
+                Section::make('Thông tin cơ bản')
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->label('Họ tên')
@@ -62,7 +62,7 @@ class UserResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Bảo mật')
+                Section::make('Bảo mật')
                     ->schema([
                         Forms\Components\TextInput::make('password')
                             ->label('Mật khẩu')
@@ -82,7 +82,7 @@ class UserResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Phân quyền')
+                Section::make('Phân quyền')
                     ->schema([
                         Forms\Components\Select::make('role')
                             ->label('Vai trò')
