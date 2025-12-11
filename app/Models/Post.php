@@ -2,12 +2,19 @@
 
 namespace App\Models;
 
+use App\Casts\LexicalToHtmlCast;
+use App\Models\Concerns\HasRichEditorMedia;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Post extends Model
 {
     use HasFactory;
+    use HasRichEditorMedia;
+
+    protected array $richEditorFields = ['content'];
+
+    protected string $richEditorContentDirectory = 'posts';
 
     /**
      * The attributes that are mass assignable.
@@ -33,6 +40,7 @@ class Post extends Model
         return [
             'active' => 'boolean',
             'order' => 'integer',
+            'content' => LexicalToHtmlCast::class,
         ];
     }
 }

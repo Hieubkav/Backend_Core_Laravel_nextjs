@@ -22,8 +22,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\IsAdmin::class,
         ]);
 
-        // Không redirect guest tới route('login') cho API (tránh lỗi Route [login] not defined)
-        $middleware->redirectGuestsTo(fn () => null);
+        // Chỉ disable redirect cho API requests, giữ nguyên cho web (Filament)
+        $middleware->redirectGuestsTo(function ($request) {
+            if ($request->is('api/*')) {
+                return null;
+            }
+            return route('filament.admin.auth.login');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Luôn trả JSON cho API (tránh redirect tới route 'login')

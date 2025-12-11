@@ -31,7 +31,7 @@ class Handler extends ExceptionHandler
     ];
 
     /**
-     * Convert authentication exception to JSON for API, avoid redirect to route('login').
+     * Convert authentication exception to JSON for API, redirect to Filament login for admin.
      */
     protected function unauthenticated($request, AuthenticationException $exception)
     {
@@ -41,6 +41,11 @@ class Handler extends ExceptionHandler
                 'message' => 'Unauthenticated.',
                 'errors' => null,
             ], 401);
+        }
+
+        // Redirect to Filament admin login if accessing admin routes
+        if ($request->is('admin/*') || $request->is('admin')) {
+            return redirect()->guest(route('filament.admin.auth.login'));
         }
 
         return redirect()->guest('/');
